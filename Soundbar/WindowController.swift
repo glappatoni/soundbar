@@ -26,7 +26,9 @@ class WindowController: NSWindowController, NSTouchBarDelegate {
     
     
     func playSound(sender: NSButton) {
-        let fileUrl = getUrlFromTitle(title: sender.title)
+        guard let fileUrl = getUrlFromTitle(title: sender.title) else {
+            return
+        }
         
         do {
             player = try AVAudioPlayer(contentsOf: fileUrl)
@@ -43,9 +45,12 @@ class WindowController: NSWindowController, NSTouchBarDelegate {
         return url.lastPathComponent.replacingOccurrences(of: ".mp3", with: "")
     }
     
-    func getUrlFromTitle(title: String) -> URL {
-        let file = self.files[title]!
-        return URL.init(string: file)!
+    func getUrlFromTitle(title: String) -> URL? {
+        guard let file = files[title] else {
+            return nil
+        }
+        
+        return URL(string: file)
     }
     
     func getResourceFolderUrl() -> URL {
@@ -70,7 +75,7 @@ class WindowController: NSWindowController, NSTouchBarDelegate {
             let mp3Files = directoryContents.filter { file in file.lastPathComponent.contains(".mp3") }
             for file in mp3Files {
                 let title = getTitleFromUrl(url: file)
-                self.files[title] = file.absoluteURL.absoluteString
+                files[title] = file.absoluteURL.absoluteString
             }
             return mp3Files.flatMap { file in NSTouchBarItemIdentifier(getTitleFromUrl(url: file)) }
         } catch let error {
@@ -80,24 +85,17 @@ class WindowController: NSWindowController, NSTouchBarDelegate {
     }
     
     
-    @available(OSX 10.12.1, *)
+    @available(OSX 10.12.2, *)
     override func makeTouchBar() -> NSTouchBar? {
         let touchBar = NSTouchBar()
         touchBar.delegate = self
         touchBar.customizationIdentifier = .touchBar
         
-        let musicUrl = getMusicFolderUrl()
-        let resourceUrl = getResourceFolderUrl()
-        let musicItems = musicUrl != nil ? readFolder(source: musicUrl!) : []
-        let resourceItems = readFolder(source: resourceUrl)
-        touchBar.defaultItemIdentifiers = [NSTouchBarItemIdentifier("test")]
-        //touchBar.defaultItemIdentifiers = musicItems + resourceItems
-        
         return touchBar
         
     }
     
-    @available(OSX 10.12.1, *)
+    @available(OSX 10.12.2, *)
     func touchBar(_ touchBar: NSTouchBar, makeItemForIdentifier identifier: NSTouchBarItemIdentifier) -> NSTouchBarItem? {
         let touchBarItem = NSCustomTouchBarItem(identifier: identifier)
         let scrollView = NSScrollView()
@@ -106,9 +104,9 @@ class WindowController: NSWindowController, NSTouchBarDelegate {
         let scrollerRight = NSScroller()
         let contentView = NSView()
         
-        let buttonWidth = 70;
-        let contentWidth = self.files.count * buttonWidth;
-        let height = 35;
+        let buttonWidth = 70
+        let contentWidth = files.count * buttonWidth
+        let height = 35
         
         //scrollView.frame = NSRect(x: 0, y: 0, width: 500, height: 30)
         clipView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: height)
@@ -121,8 +119,8 @@ class WindowController: NSWindowController, NSTouchBarDelegate {
         scrollView.documentView = clipView
         touchBarItem.view = scrollView
 
-        var i = 0;
-        for (key, value) in self.files {
+        var i = 0
+        for (key, _) in files {
             let button = NSButton(title: key, target: self, action: #selector(playSound))
             let buttonFrame = NSRect(x: buttonWidth * i, y: 0, width: buttonWidth - 10, height: height - 5)
             button.frame = buttonFrame
@@ -131,18 +129,6 @@ class WindowController: NSWindowController, NSTouchBarDelegate {
         }
         
         return touchBarItem
-        
-        /*let frameSize = NSSize(width: touchBarItem.view.frame.width, height: touchBarItem.view.frame.height)
-        scrollView.setBoundsSize(frameSize)
-        scrollView.autoresizingMask = .viewWidthSizable
-        touchBarItem.view = scrollView
-        return touchBarItem*/
-        //return NSGroupTouchBarItem.groupItem(withIdentifier: NSTouchBarItemIdentifier(identifier.rawValue), items: touchBarItems)
-        
-        /*let touchBarItem = NSCustomTouchBarItem(identifier: identifier)
-        let button = NSButton(title: identifier.rawValue, target: self, action: #selector(playSound))
-        touchBarItem.view = button
-        return touchBarItem*/
         
     }
     
